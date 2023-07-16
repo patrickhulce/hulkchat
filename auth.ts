@@ -1,5 +1,5 @@
 import NextAuth, { type DefaultSession } from 'next-auth'
-import GitHub from 'next-auth/providers/github'
+import Google from 'next-auth/providers/google'
 
 declare module 'next-auth' {
   interface Session {
@@ -15,7 +15,12 @@ export const {
   auth,
   CSRF_experimental // will be removed in future
 } = NextAuth({
-  providers: [GitHub],
+  providers: [
+    Google({
+      clientId: process.env.GOOGLE_OAUTH_CLIENT_ID,
+      clientSecret: process.env.GOOGLE_OAUTH_CLIENT_SECRET
+    })
+  ],
   callbacks: {
     jwt({ token, profile }) {
       if (profile) {
