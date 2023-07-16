@@ -2,7 +2,8 @@ import { ImageResponse } from 'next/server'
 
 import { getSharedChat } from '@/app/actions'
 
-export const runtime = 'edge'
+// Disabled
+// export const runtime = 'edge'
 
 export const alt = 'AI Chatbot'
 
