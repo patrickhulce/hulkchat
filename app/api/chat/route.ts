@@ -15,7 +15,7 @@ const openai = new OpenAIApi(configuration)
 
 export async function POST(req: Request) {
   const json = await req.json()
-  const { messages, previewToken } = json
+  const { messages, model } = json
   const session = await auth()
   const userId = session?.user.id
 
@@ -25,12 +25,8 @@ export async function POST(req: Request) {
     })
   }
 
-  if (previewToken) {
-    configuration.apiKey = previewToken
-  }
-
   const res = await openai.createChatCompletion({
-    model: 'gpt-3.5-turbo',
+    model,
     messages,
     temperature: 0.7,
     stream: true
