@@ -9,15 +9,10 @@ import { FooterText } from '@/components/footer'
 export interface ChatPanelProps
   extends Pick<
     UseChatHelpers,
-    | 'append'
-    | 'isLoading'
-    | 'reload'
-    | 'messages'
-    | 'stop'
-    | 'input'
-    | 'setInput'
+    'append' | 'isLoading' | 'reload' | 'stop' | 'input' | 'setInput'
   > {
   id?: string
+  shouldShowRegenerate?: boolean
 }
 
 export function ChatPanel({
@@ -28,7 +23,7 @@ export function ChatPanel({
   reload,
   input,
   setInput,
-  messages
+  shouldShowRegenerate
 }: ChatPanelProps) {
   return (
     <div className="fixed inset-x-0 bottom-0 bg-gradient-to-b from-muted/10 from-10% to-muted/30 to-50%">
@@ -45,7 +40,7 @@ export function ChatPanel({
               Stop generating
             </Button>
           ) : (
-            messages?.length > 0 && (
+            shouldShowRegenerate && (
               <Button
                 variant="outline"
                 onClick={() => reload()}
