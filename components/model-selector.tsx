@@ -1,26 +1,67 @@
 'use client'
 
-import { Suspense, useEffect } from 'react'
+import { Suspense, useState, useEffect } from 'react'
 import { usePathname, useSearchParams, useRouter } from 'next/navigation'
-import { useModels } from '@/lib/hooks/use-models'
+import { ModelName, useModels } from '@/lib/hooks/use-models'
 
 function ModelSelector_() {
   const pathname = usePathname()
-  const [models, setModels] = useModels()
+  const [selectedModels, setSelectedModels] = useModels()
+  const [isOpen, setIsOpen] = useState(false)
 
   const isChat = pathname.includes('/chat') || pathname === '/'
   if (!isChat) return null
 
+  const modelOptions: ModelName[] = ['gpt-3.5-turbo', 'gpt-4']
+
+  const toggleModel = (option: ModelName) => {
+    if (selectedModels.includes(option)) {
+      setSelectedModels(selectedModels.filter(item => item !== option))
+    } else {
+      setSelectedModels([...selectedModels, option])
+    }
+  }
+
   return (
-    <button
-      onClick={() => {
-        const nextModel =
-          models[0] === 'gpt-3.5-turbo' ? 'gpt-4' : 'gpt-3.5-turbo'
-        setModels([nextModel])
-      }}
-    >
-      {models.join(',')}
-    </button>
+    <div className="relative inline-block w-64 text-left">
+      <div>
+        <button
+          type="button"
+          onClick={() => setIsOpen(!isOpen)}
+          className="inline-flex h-8 w-full items-center justify-center rounded-md border border-input px-4 py-2 text-sm font-medium shadow ring-offset-background transition-colors hover:bg-accent hover:text-accent-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50"
+        >
+          Model ({selectedModels.join(',').toUpperCase()})
+        </button>
+      </div>
+
+      {isOpen && (
+        <div className="absolute left-0 mt-2 w-56 origin-top-right rounded-md bg-background text-gray-200 shadow-lg ring-1 ring-black ring-opacity-5">
+          <div
+            className="py-1"
+            role="menu"
+            aria-orientation="vertical"
+            aria-labelledby="options-menu"
+          >
+            {modelOptions.map(option => (
+              <div
+                key={option}
+                onClick={() => toggleModel(option)}
+                role="menuitem"
+              >
+                <label className="block cursor-pointer px-4 py-2 text-sm text-gray-200 hover:bg-accent hover:text-gray-50">
+                  <input
+                    type="checkbox"
+                    checked={selectedModels.includes(option)}
+                    onChange={() => {}}
+                  />{' '}
+                  {option.toUpperCase()}
+                </label>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
   )
 }
 

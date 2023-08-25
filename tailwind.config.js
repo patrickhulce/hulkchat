@@ -1,5 +1,9 @@
 const { fontFamily } = require('tailwindcss/defaultTheme')
 
+const dimensions = Object.fromEntries(
+  Array.from({ length: 96 }).map((_, i) => [i + 1, `${(i + 1) / 4}rem`])
+)
+
 /** @type {import('tailwindcss').Config} */
 module.exports = {
   darkMode: ['class'],
@@ -13,6 +17,8 @@ module.exports = {
       }
     },
     extend: {
+      width: dimensions,
+      height: dimensions,
       fontFamily: {
         sans: ['var(--font-sans)', ...fontFamily.sans]
       },

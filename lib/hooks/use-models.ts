@@ -2,7 +2,7 @@ import { useRouter, useSearchParams } from 'next/navigation'
 
 const ALLOWED_MODELS = new Set<ModelName>(['gpt-3.5-turbo', 'gpt-4'])
 
-type ModelName = 'gpt-3.5-turbo' | 'gpt-4'
+export type ModelName = 'gpt-3.5-turbo' | 'gpt-4'
 
 export function useModels(): [ModelName[], (models: ModelName[]) => void] {
   const searchParams = useSearchParams()
