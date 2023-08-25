@@ -1,17 +1,25 @@
 import { useRouter, useSearchParams } from 'next/navigation'
 
-const ALLOWED_MODELS = new Set<ModelName>(['gpt-3.5-turbo', 'gpt-4'])
+const LOCAL_STORAGE_KEY = 'openchat_model'
 
-export type ModelName = 'gpt-3.5-turbo' | 'gpt-4'
+const ALLOWED_MODELS = new Set<ModelName>([
+  'gpt-3.5-turbo',
+  'gpt-4',
+  'claude-2'
+])
+
+export type ModelName = 'gpt-3.5-turbo' | 'gpt-4' | 'claude-2'
 
 export function useModels(): [ModelName[], (models: ModelName[]) => void] {
   const searchParams = useSearchParams()
   const router = useRouter()
-  const models = searchParams
-    .getAll('model')
-    .filter((model: string): model is ModelName =>
+  const queryModels = searchParams.getAll('model')
+  const localModels = (localStorage.getItem(LOCAL_STORAGE_KEY) || '').split(',')
+
+  const models = Array.from(new Set([...queryModels, ...localModels])).filter(
+    (model: string): model is ModelName =>
       ALLOWED_MODELS.has(model as ModelName)
-    )
+  )
 
   const setModels = (nextModels: ModelName[]) => {
     const href = new URL(window.location.href)
@@ -19,6 +27,7 @@ export function useModels(): [ModelName[], (models: ModelName[]) => void] {
     href.searchParams.delete('model')
     for (const model of nextModels) href.searchParams.append('model', model)
 
+    localStorage.setItem(LOCAL_STORAGE_KEY, nextModels.join(','))
     router.replace(`${href.pathname}${href.search}`)
   }
 

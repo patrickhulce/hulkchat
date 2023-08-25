@@ -1,18 +1,22 @@
-import { Message } from 'ai'
 import remarkGfm from 'remark-gfm'
 import remarkMath from 'remark-math'
 
 import { cn } from '@/lib/utils'
 import { CodeBlock } from '@/components/ui/codeblock'
 import { MemoizedReactMarkdown } from '@/components/markdown'
-import { IconOpenAI, IconUser } from '@/components/ui/icons'
+import { IconAnthropic, IconOpenAI, IconUser } from '@/components/ui/icons'
 import { ChatMessageActions } from '@/components/chat-message-actions'
+import { Message } from '@/lib/types'
+import { useModels } from '@/lib/hooks/use-models'
 
 export interface ChatMessageProps {
   message: Message
 }
 
 export function ChatMessage({ message, ...props }: ChatMessageProps) {
+  const [selectedModels] = useModels()
+  const modelUsed = message.model || selectedModels[0]
+
   return (
     <div
       className={cn('group relative mb-4 flex items-start md:-ml-12')}
@@ -26,7 +30,13 @@ export function ChatMessage({ message, ...props }: ChatMessageProps) {
             : 'bg-primary text-primary-foreground'
         )}
       >
-        {message.role === 'user' ? <IconUser /> : <IconOpenAI />}
+        {message.role === 'user' ? (
+          <IconUser />
+        ) : modelUsed.startsWith('claude') ? (
+          <IconAnthropic />
+        ) : (
+          <IconOpenAI />
+        )}
       </div>
       <div className="ml-4 flex-1 space-y-2 overflow-hidden px-1">
         <MemoizedReactMarkdown

@@ -1,7 +1,7 @@
 'use client'
 
 import { Suspense, useState, useEffect } from 'react'
-import { usePathname, useSearchParams, useRouter } from 'next/navigation'
+import { usePathname } from 'next/navigation'
 import { ModelName, useModels } from '@/lib/hooks/use-models'
 
 function ModelSelector_() {
@@ -12,14 +12,11 @@ function ModelSelector_() {
   const isChat = pathname.includes('/chat') || pathname === '/'
   if (!isChat) return null
 
-  const modelOptions: ModelName[] = ['gpt-3.5-turbo', 'gpt-4']
+  const modelOptions: ModelName[] = ['gpt-3.5-turbo', 'gpt-4', 'claude-2']
 
-  const toggleModel = (option: ModelName) => {
-    if (selectedModels.includes(option)) {
-      setSelectedModels(selectedModels.filter(item => item !== option))
-    } else {
-      setSelectedModels([...selectedModels, option])
-    }
+  const setModel = (option: ModelName) => {
+    setSelectedModels([option])
+    setIsOpen(false)
   }
 
   return (
@@ -45,17 +42,11 @@ function ModelSelector_() {
             {modelOptions.map(option => (
               <div
                 key={option}
-                onClick={() => toggleModel(option)}
+                onClick={() => setModel(option)}
+                className="block cursor-pointer px-4 py-2 text-sm text-gray-200 hover:bg-accent hover:text-gray-50"
                 role="menuitem"
               >
-                <label className="block cursor-pointer px-4 py-2 text-sm text-gray-200 hover:bg-accent hover:text-gray-50">
-                  <input
-                    type="checkbox"
-                    checked={selectedModels.includes(option)}
-                    onChange={() => {}}
-                  />{' '}
-                  {option.toUpperCase()}
-                </label>
+                {option.toUpperCase()}
               </div>
             ))}
           </div>
