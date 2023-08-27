@@ -8,6 +8,11 @@ const ALLOWED_MODELS = new Set<ModelName>([
   'claude-2'
 ])
 
+const localStorage = global.localStorage || {
+  getItem: () => '',
+  setItem: () => ''
+}
+
 export type ModelName = 'gpt-3.5-turbo' | 'gpt-4' | 'claude-2'
 
 export function useModels(): [ModelName[], (models: ModelName[]) => void] {
