@@ -2,10 +2,16 @@ import { inngest } from '../inngest'
 import { kv } from '@vercel/kv'
 import { Configuration, OpenAIApi } from 'openai-edge'
 
-import { auth } from '@/auth'
 import { nanoid } from '@/lib/utils'
-import { Chat, Message } from '@/lib/types'
-import { ModelName } from '@/lib/hooks/use-models'
+import {
+  TaskModelResponseRequest,
+  TaskModelEvaluationRequest,
+  JobStatus,
+  FunctionEvent,
+  Message,
+  ModelOptions,
+  TaskEvaluationRequest
+} from '@/lib/types'
 import { CreateChatCompletionResponse } from 'openai-edge/types/types/chat'
 
 const openai = new OpenAIApi(
@@ -13,49 +19,6 @@ const openai = new OpenAIApi(
     apiKey: process.env.OPENAI_API_KEY
   })
 )
-
-interface EvaluationRubric {
-  criteria: Array<{ name: string; description: string; weight: number }>
-  aggregation: 'geometric-mean' | 'arithmetic-mean'
-}
-
-interface ModelEvaluationCandidate {
-  task: string | Message[]
-  content: string
-  model: ModelName
-}
-
-export interface StartEvaluationRequest {
-  userId: string
-  task: string | Message[]
-  models: ModelOptions[]
-  rubric: EvaluationRubric
-}
-
-interface CreationRequest {
-  userId: string
-  task: string | Message[]
-  model: ModelName
-  temperature: number
-  rubric: EvaluationRubric
-}
-
-interface EvaluationRequest {
-  userId: string
-  candidate: ModelEvaluationCandidate
-  rubric: EvaluationRubric
-}
-
-export enum FunctionEvent {
-  StartEvaluation = 'start-evaluation',
-  CreateResponse = 'create-response',
-  EvaluateResponse = 'evaluate-response'
-}
-
-interface ModelOptions {
-  model: ModelName
-  temperature: number
-}
 
 async function getGptResponse(
   prompt: string | Message[],
