@@ -53,6 +53,22 @@ async function getGptResponse(
   return completion
 }
 
+async function checkForCompletionOfAllTaskEvaluationRequests(
+  evaluationId: string
+) {
+  const requestIds = await kv.zrange<string[]>(
+    `eval:${evaluationId}:requests:active`,
+    0,
+    -1
+  )
+
+  if (requestIds.length === 0) {
+    await kv.hset(`eval:${evaluationId}`, {
+      status: JobStatus.Completed
+    })
+  }
+}
+
 async function getGptJsonResponse<T>(
   prompt: string | Message[],
   options: ModelOptions
@@ -60,27 +76,47 @@ async function getGptJsonResponse<T>(
   return JSON.parse(await getGptResponse(prompt, options))
 }
 
-export const startEvaluation = inngest.createFunction(
-  { name: 'Start Evaluation' },
+export const startTaskEvaluation = inngest.createFunction(
+  { name: 'Start Task Evaluation' },
   { event: FunctionEvent.StartEvaluation },
   async ({ event, step }) => {
-    const json: StartEvaluationRequest = event.data
+    const json: TaskEvaluationRequest = event.data
 
-    const { userId, rubric } = json
+    const { userId, rubric, task, models, evaluationId, repetitions } = json
 
-    for (const { model, temperature } of json.models) {
-      const request: CreationRequest = {
-        userId,
-        rubric,
-        task: json.task,
-        model,
-        temperature
+    await kv.hset(`eval:${evaluationId}`, { status: JobStatus.Active })
+
+    for (const { model, temperature } of models) {
+      for (let i = 0; i < repetitions + 1; i++) {
+        const request: TaskModelResponseRequest = {
+          evaluationId,
+          userId,
+          requestId: nanoid(),
+
+          rubric,
+          task,
+          model,
+          temperature
+        }
+
+        await kv.hset(`eval:${evaluationId}:requests:${request.requestId}`, {
+          ...request,
+          status: JobStatus.Queued
+        })
+        await kv.zadd(`eval:${evaluationId}:requests`, {
+          score: Date.now(),
+          member: request.requestId
+        })
+        await kv.zadd(`eval:${evaluationId}:requests:active`, {
+          score: Date.now(),
+          member: request.requestId
+        })
+
+        await step.sendEvent({
+          name: FunctionEvent.CreateResponse,
+          data: request
+        })
       }
-
-      await step.sendEvent({
-        name: FunctionEvent.CreateResponse,
-        data: request
-      })
     }
   }
 )
@@ -93,28 +129,48 @@ function stringifyTask(task: string | Message[]): string {
   return task.map(item => item.content).join('\n')
 }
 
-export const createResponse = inngest.createFunction(
-  { name: 'Create Response' },
+export const getModelResponseForTask = inngest.createFunction(
+  { name: 'Get Model Response for Task' },
   { event: FunctionEvent.CreateResponse },
   async ({ event, step }) => {
-    const json: CreationRequest = event.data
+    const json: TaskModelResponseRequest = event.data
 
-    const { userId, rubric } = json
-
-    const response = await getGptResponse(json.task, {
-      model: json.model,
-      temperature: json.temperature
-    })
-
-    const request: EvaluationRequest = {
+    const {
       userId,
       rubric,
+      evaluationId,
+      model,
+      task,
+      temperature,
+      requestId
+    } = json
+
+    await kv.hset(`eval:${evaluationId}:requests:${requestId}`, {
+      status: JobStatus.Active
+    })
+
+    const response = await getGptResponse(task, {
+      model,
+      temperature
+    })
+
+    const request: TaskModelEvaluationRequest = {
+      userId,
+      evaluationId,
+      requestId,
+
+      rubric,
       candidate: {
-        task: json.task,
+        task,
         content: response,
-        model: json.model
+        model
       }
     }
+
+    await kv.hset(`eval:${evaluationId}:requests:${requestId}`, {
+      ...request,
+      status: JobStatus.Active
+    })
 
     await step.sendEvent({
       name: FunctionEvent.EvaluateResponse,
@@ -123,13 +179,13 @@ export const createResponse = inngest.createFunction(
   }
 )
 
-export const evaluateResponse = inngest.createFunction(
-  { name: 'Evaluate Response' },
+export const evaluateTaskModel = inngest.createFunction(
+  { name: 'Evaluate Task-Model Response' },
   { event: FunctionEvent.EvaluateResponse },
   async ({ event, step }) => {
-    const json: EvaluationRequest = event.data
+    const json: TaskModelEvaluationRequest = event.data
 
-    const { userId, candidate, rubric } = json
+    const { userId, candidate, rubric, evaluationId, requestId } = json
 
     const rubricText = rubric.criteria
       .map(item => `- ${item.name}: "${item.description}"`)
@@ -137,6 +193,8 @@ export const evaluateResponse = inngest.createFunction(
 
     const rubricInterface = rubric.criteria
       .flatMap(item => [
+        `  /** An explanation of the response's performance on the "${item.name}" dimension. */`,
+        `  '${item.name}-explanation': string;`,
         `  /** A number in the range 1-10 representing the quality along the "${item.name}" dimension. */`,
         `  '${item.name}': number;`
       ])
@@ -181,7 +239,13 @@ export const evaluateResponse = inngest.createFunction(
         ? cumulativeWeightedScore ** (1 / totalWeight)
         : cumulativeWeightedScore / totalWeight
     const result = { evaluation, score: aggregateScore }
-    console.log(result)
-    return result
+
+    await kv.hset(`eval:${evaluationId}:requests:${requestId}`, {
+      status: JobStatus.Completed,
+      result
+    })
+    await kv.zrem(`eval:${evaluationId}:requests:active`, requestId)
+
+    await checkForCompletionOfAllTaskEvaluationRequests(json.evaluationId)
   }
 )
