@@ -1,6 +1,13 @@
 import { auth } from '@/auth'
+import { kv } from '@vercel/kv'
 import { inngest } from '@/lib/inngest'
-import { FunctionEvent, StartEvaluationRequest } from '@/lib/inngest/functions'
+import {
+  FunctionEvent,
+  JobStatus,
+  TaskEvaluation,
+  TaskEvaluationRequest
+} from '@/lib/types'
+import { nanoid } from 'nanoid'
 
 export const runtime = 'edge'
 
@@ -16,8 +23,9 @@ export async function POST(req: Request) {
     })
   }
 
-  const data: StartEvaluationRequest = {
+  const data: TaskEvaluationRequest = {
     userId,
+    evaluationId: nanoid(),
     task: messages,
     rubric: {
       aggregation: 'geometric-mean',
@@ -45,8 +53,13 @@ export async function POST(req: Request) {
     models: [
       { model: 'gpt-3.5-turbo', temperature: 0.9 },
       { model: 'gpt-4', temperature: 0.7 }
-    ]
+    ],
+    repetitions: 0
   }
+
+  const evaluation: TaskEvaluation = { ...data, status: JobStatus.Queued }
+
+  await kv.hset(`eval:${evaluation.evaluationId}`, { ...evaluation })
 
   await inngest.send({ name: FunctionEvent.StartEvaluation, data })
 }
