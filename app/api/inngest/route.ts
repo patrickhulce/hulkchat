@@ -5,7 +5,7 @@ import * as functions from '@/lib/inngest/functions'
 
 // Create an API that serves zero functions
 export const { GET, POST, PUT } = serve(inngest, [
-  functions.startEvaluation,
-  functions.createResponse,
-  functions.evaluateResponse
+  functions.startTaskEvaluation,
+  functions.getModelResponseForTask,
+  functions.evaluateTaskModel
 ])
