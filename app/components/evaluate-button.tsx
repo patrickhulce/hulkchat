@@ -7,7 +7,7 @@ export function EvaluateButton() {
     <button
       className="bg-primary text-background"
       onClick={async () =>
-        fetch(`/api/evaluate`, {
+        fetch(`/api/evaluations`, {
           method: 'POST',
           headers: { 'content-type': 'application/json' },
           body: JSON.stringify({

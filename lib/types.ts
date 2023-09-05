@@ -48,6 +48,7 @@ export interface TaskEvaluationRequest {
 
 export interface TaskEvaluation extends TaskEvaluationRequest {
   status: JobStatus
+  tasks?: TaskModelEvaluation[]
 }
 
 export interface TaskModelResponseRequest {
