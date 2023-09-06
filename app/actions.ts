@@ -118,3 +118,54 @@ export async function shareChat(chat: Chat) {
 
   return payload
 }
+
+export async function getEvaluations(
+  userId: string
+): Promise<TaskEvaluation[]> {
+  let pipeline = kv.pipeline()
+
+  const evaluationIds = await kv.zrange<string[]>(
+    `user:eval:${userId}`,
+    0,
+    -1,
+    {
+      rev: true
+    }
+  )
+
+  if (!evaluationIds.length) {
+    return []
+  }
+
+  for (const evaluationId of evaluationIds) {
+    pipeline.hgetall(`eval:${evaluationId}`)
+  }
+
+  const results: TaskEvaluation[] = await pipeline.exec()
+
+  pipeline = kv.pipeline()
+  for (const evaluation of results) {
+    const requestIds = await kv.zrange<string[]>(
+      `eval:${evaluation.evaluationId}:requests`,
+      0,
+      -1
+    )
+    for (const requestId of requestIds) {
+      pipeline.hgetall(`eval:${evaluation.evaluationId}:requests:${requestId}`)
+    }
+  }
+
+  const taskEvals: TaskModelEvaluation[] = await pipeline.exec()
+  for (const taskEval of taskEvals) {
+    const evaluation = results.find(
+      e => e.evaluationId === taskEval.evaluationId
+    )
+    if (evaluation) {
+      const tasks = evaluation.tasks || []
+      tasks.push(taskEval)
+      evaluation.tasks = tasks
+    }
+  }
+
+  return results
+}

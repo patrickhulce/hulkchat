@@ -12,10 +12,16 @@ export const runtime = 'edge'
 
 export default async function EvaluatePage() {
   const session = await auth()
+  if (!session.user) {
+    redirect(`/sign-in?next=/evaluate`)
+  }
+
+  const evaluations = await getEvaluations(session.user.id)
 
   return (
     <>
       Hello {session.user?.name}! <EvaluateButton />
+      <pre>{JSON.stringify(evaluations, null, 2)}</pre>
     </>
   )
 }

@@ -8,8 +8,22 @@ import {
   TaskEvaluationRequest
 } from '@/lib/types'
 import { nanoid } from 'nanoid'
+import { getEvaluations } from '@/app/actions'
 
 export const runtime = 'edge'
+
+export async function GET(req: Request) {
+  const session = await auth()
+  const userId = session?.user.id
+
+  if (!userId) {
+    return new Response('Unauthorized', {
+      status: 401
+    })
+  }
+
+  return getEvaluations(userId)
+}
 
 export async function POST(req: Request) {
   const json = await req.json()
@@ -59,6 +73,10 @@ export async function POST(req: Request) {
 
   const evaluation: TaskEvaluation = { ...data, status: JobStatus.Queued }
 
+  await kv.zadd(`user:eval:${userId}`, {
+    member: evaluation.evaluationId,
+    score: Date.now()
+  })
   await kv.hset(`eval:${evaluation.evaluationId}`, { ...evaluation })
 
   await inngest.send({ name: FunctionEvent.StartEvaluation, data })
